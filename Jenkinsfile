@@ -116,7 +116,7 @@ pipeline {
 
   post {
     always {
-      cleanWs()
+      // Workspace cleaned in declarative post actions
     }
   }
 }
