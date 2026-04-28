@@ -116,7 +116,7 @@ pipeline {
 
   post {
     always {
-      // Workspace cleaned in declarative post actions
+      echo 'Pipeline execution completed'
     }
   }
 }
