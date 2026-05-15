@@ -6,7 +6,7 @@ This repository contains a Jenkins pipeline and Terraform configuration that pro
 - a public subnet
 - an internet gateway and route table
 - a security group
-- one EC2 instance running Apache HTTPD
+- one EC2 instance bootstrapped with Kubernetes tooling
 
 ## Repository Layout
 
@@ -44,6 +44,6 @@ The pipeline runs these stages:
 
 ## Notes
 
-- The configuration uses the latest Amazon Linux 2023 AMI in the selected region.
+- The EC2 bootstrap installs containerd, kubelet, kubeadm, and kubectl on Amazon Linux 2023.
 - If you need remote state, add an S3 backend before using this in production.
 - Restrict `SSH_ALLOWED_CIDR` to your IP instead of leaving it open.
