@@ -88,79 +88,14 @@ pipeline {
             $ErrorActionPreference = 'Stop'
             Set-Location $env:TERRAFORM_DIR
             terraform apply -auto-approve tfplan
-          '''
-        }
-      }
-    }
-
-    stage('Verify Kubernetes Installation') {
-      when {
-        expression { params.ACTION == 'apply' }
-      }
-      steps {
-        withCredentials([
-          [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']
-        ]) {
-          powershell '''
-            $ErrorActionPreference = 'Stop'
-            Set-Location $env:TERRAFORM_DIR
-
-            $instanceId = terraform output -raw instance_id
-            Write-Host "Sending SSM verification command to instance $instanceId"
-
-            $commands = @(
-              'set -euo pipefail',
-              'echo "Hostname: $(hostname)"',
-              'if command -v kubectl >/dev/null 2>&1; then kubectl version --client --short || kubectl version --client; else echo "kubectl: not installed"; exit 1; fi',
-              'if command -v kubeadm >/dev/null 2>&1; then kubeadm version --short || kubeadm version; else echo "kubeadm: not installed"; exit 1; fi',
-              'if command -v kubelet >/dev/null 2>&1; then kubelet --version; systemctl is-enabled kubelet; systemctl is-active kubelet; else echo "kubelet: not installed"; exit 1; fi'
-            )
-
-            $payload = @{
-              DocumentName = 'AWS-RunShellScript'
-              InstanceIds  = @($instanceId)
-              Comment      = 'Verify Kubernetes installation'
-              Parameters   = @{ commands = $commands }
-            }
-
-            $payloadPath = Join-Path $env:TEMP 'ssm-send-command.json'
-            $payloadJson = $payload | ConvertTo-Json -Depth 6 -Compress
-            [System.IO.File]::WriteAllText($payloadPath, $payloadJson, (New-Object System.Text.UTF8Encoding($false)))
-
-            $payloadUri = [System.Uri]::new($payloadPath).AbsoluteUri
-            $commandId = (aws ssm send-command --cli-input-json $payloadUri --query 'Command.CommandId' --output text).Trim()
-
-            for ($attempt = 1; $attempt -le 24; $attempt++) {
-              try {
-                $invocationJson = aws ssm get-command-invocation --command-id $commandId --instance-id $instanceId --output json
-                $invocation = $invocationJson | ConvertFrom-Json
-
-                if ($invocation.Status -in @('Pending', 'InProgress', 'Delayed')) {
-                  Start-Sleep -Seconds 10
-                  continue
-                }
-
-                if ($invocation.StandardOutputContent) {
-                  Write-Host $invocation.StandardOutputContent
-                }
-
-                if ($invocation.StandardErrorContent) {
-                  Write-Host $invocation.StandardErrorContent
-                }
-
-                if ($invocation.Status -ne 'Success') {
-                  throw "SSM command ended with status $($invocation.Status)"
-                }
-
-                break
-              } catch {
-                if ($attempt -eq 24) {
-                  throw
-                }
-
-                Start-Sleep -Seconds 10
-              }
-            }
+            
+            Write-Host ""
+            Write-Host "EC2 instance provisioned successfully!"
+            Write-Host ""
+            Write-Host "To connect via SSH:"
+            Write-Host "1. terraform output -raw ssh_private_key_pem > ec2-key.pem"
+            Write-Host "2. chmod 400 ec2-key.pem"
+            Write-Host "3. ssh -i ec2-key.pem ec2-user@$(terraform output -raw public_ip)"
           '''
         }
       }
