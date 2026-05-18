@@ -11,7 +11,7 @@ variable "instance_type" {
 }
 
 variable "allowed_ssh_cidr" {
-  description = "CIDR block allowed to connect to the instance over SSH"
+  description = "CIDR block allowed to connect to the instance over SSH (default: 0.0.0.0/0)"
   type        = string
   default     = "0.0.0.0/0"
 }
