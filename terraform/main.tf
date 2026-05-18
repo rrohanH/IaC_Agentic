@@ -108,6 +108,14 @@ resource "aws_security_group" "ec2" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+
+  ingress {
     description = "HTTP"
     from_port   = 80
     to_port     = 80
@@ -127,6 +135,16 @@ resource "aws_security_group" "ec2" {
   }
 }
 
+resource "tls_private_key" "ssh" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "ssh" {
+  key_name   = "jenkins-terraform-ssh-key"
+  public_key = tls_private_key.ssh.public_key_openssh
+}
+
 resource "aws_instance" "web" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = var.instance_type
@@ -134,6 +152,7 @@ resource "aws_instance" "web" {
   vpc_security_group_ids      = [aws_security_group.ec2.id]
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.ssm.name
+  key_name                    = aws_key_pair.ssh.key_name
 
   user_data = <<-EOF
 #!/bin/bash

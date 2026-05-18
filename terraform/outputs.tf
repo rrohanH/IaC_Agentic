@@ -12,3 +12,9 @@ output "public_dns" {
   description = "Public DNS name of the EC2 instance"
   value       = aws_instance.web.public_dns
 }
+
+output "ssh_private_key_pem" {
+  description = "Private key for SSH access to the EC2 instance"
+  value       = tls_private_key.ssh.private_key_pem
+  sensitive   = true
+}
