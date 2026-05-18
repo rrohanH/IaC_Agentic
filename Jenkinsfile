@@ -123,8 +123,12 @@ pipeline {
               Parameters   = @{ commands = $commands }
             }
 
+            $payloadPath = Join-Path $env:TEMP 'ssm-send-command.json'
             $payloadJson = $payload | ConvertTo-Json -Depth 6 -Compress
-            $commandId = (aws ssm send-command --cli-input-json $payloadJson --query 'Command.CommandId' --output text).Trim()
+            [System.IO.File]::WriteAllText($payloadPath, $payloadJson, (New-Object System.Text.UTF8Encoding($false)))
+
+            $payloadUri = [System.Uri]::new($payloadPath).AbsoluteUri
+            $commandId = (aws ssm send-command --cli-input-json $payloadUri --query 'Command.CommandId' --output text).Trim()
 
             for ($attempt = 1; $attempt -le 24; $attempt++) {
               try {
