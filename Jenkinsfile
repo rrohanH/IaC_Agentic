@@ -116,12 +116,12 @@ pipeline {
               'if command -v kubelet >/dev/null 2>&1; then kubelet --version; systemctl is-enabled kubelet; systemctl is-active kubelet; else echo "kubelet: not installed"; exit 1; fi'
             )
 
-            $parameters = @{ commands = $commands } | ConvertTo-Json -Compress
-            $commandId = aws ssm send-command --document-name AWS-RunShellScript --instance-ids $instanceId --comment 'Verify Kubernetes installation' --parameters $parameters --query 'Command.CommandId' --output text
+            $parameters = @{ commands = $commands } | ConvertTo-Json -Depth 5 -Compress
+            $commandId = aws ssm send-command --document-name AWS-RunShellScript --instance-ids $instanceId --comment "Verify Kubernetes installation" --parameters "$parameters" --query "Command.CommandId" --output text
 
             for ($attempt = 1; $attempt -le 24; $attempt++) {
               try {
-                $invocationJson = aws ssm get-command-invocation --command-id $commandId --instance-id $instanceId --output json
+                $invocationJson = aws ssm get-command-invocation --command-id "$commandId" --instance-id "$instanceId" --output json
                 $invocation = $invocationJson | ConvertFrom-Json
 
                 if ($invocation.Status -in @('Pending', 'InProgress', 'Delayed')) {
