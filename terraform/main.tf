@@ -73,18 +73,39 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+resource "aws_iam_role" "ssm" {
+  name = "jenkins-terraform-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = {
+    Name = "jenkins-terraform-ssm-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_managed_instance_core" {
+  role       = aws_iam_role.ssm.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ssm" {
+  name = "jenkins-terraform-ssm-profile"
+  role = aws_iam_role.ssm.name
+}
+
 resource "aws_security_group" "ec2" {
   name        = "jenkins-terraform-ec2-sg"
-  description = "Allow SSH and HTTP access to the EC2 instance"
+  description = "Allow HTTP access to the EC2 instance"
   vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.ssh_allowed_cidr]
-  }
 
   ingress {
     description = "HTTP"
@@ -112,12 +133,15 @@ resource "aws_instance" "web" {
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.ec2.id]
   associate_public_ip_address = true
-  key_name                    = var.key_name != "" ? var.key_name : null
+  iam_instance_profile        = aws_iam_instance_profile.ssm.name
 
   user_data = <<-EOF
 #!/bin/bash
 set -eux
 dnf update -y
+
+dnf install -y amazon-ssm-agent || true
+systemctl enable --now amazon-ssm-agent || true
 
 dnf install -y containerd socat conntrack-tools ebtables ethtool iproute-tc
 

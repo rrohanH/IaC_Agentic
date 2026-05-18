@@ -9,15 +9,3 @@ variable "instance_type" {
   type        = string
   default     = "t3.micro"
 }
-
-variable "key_name" {
-  description = "Optional EC2 key pair name"
-  type        = string
-  default     = ""
-}
-
-variable "ssh_allowed_cidr" {
-  description = "CIDR block allowed to access port 22"
-  type        = string
-  default     = "0.0.0.0/0"
-}

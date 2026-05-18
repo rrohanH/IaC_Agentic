@@ -7,6 +7,7 @@ This repository contains a Jenkins pipeline and Terraform configuration that pro
 - an internet gateway and route table
 - a security group
 - one EC2 instance bootstrapped with Kubernetes tooling
+- SSM access for post-provision verification
 
 ## Repository Layout
 
@@ -30,7 +31,8 @@ The pipeline runs these stages:
 4. Terraform Validate
 5. Terraform Plan
 6. Terraform Apply (if `ACTION=apply`)
-7. Terraform Destroy (if `ACTION=destroy`)
+7. Verify Kubernetes Installation (if `ACTION=apply`)
+8. Terraform Destroy (if `ACTION=destroy`)
 
 ## How to Use
 
@@ -42,8 +44,11 @@ The pipeline runs these stages:
    - `INSTANCE_TYPE`: EC2 instance type (default: `t3.micro`)
 4. Review the plan output before approving apply or destroy.
 
+After apply, Jenkins uses AWS Systems Manager to reach the instance and verify `kubectl`, `kubeadm`, and `kubelet`. No SSH key or inbound SSH access is required for that check.
+
 ## Notes
 
 - The EC2 bootstrap installs containerd, kubelet, kubeadm, and kubectl on Amazon Linux 2023.
+- The instance profile includes the `AmazonSSMManagedInstanceCore` policy so Jenkins can verify the host through SSM.
+- The Jenkins agent needs the AWS CLI available because the verification stage calls `aws ssm send-command`.
 - If you need remote state, add an S3 backend before using this in production.
-- Restrict `SSH_ALLOWED_CIDR` to your IP instead of leaving it open.
