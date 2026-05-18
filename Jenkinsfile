@@ -126,7 +126,7 @@ pipeline {
             $payloadPath = Join-Path $env:TEMP 'ssm-send-command.json'
             $payload | ConvertTo-Json -Depth 6 | Set-Content -Path $payloadPath -Encoding utf8
 
-            $payloadUri = 'file://' + ($payloadPath -replace '\\', '/')
+            $payloadUri = 'file://' + $payloadPath.Replace([char]92, '/')
             $commandId = (aws ssm send-command --cli-input-json $payloadUri --query 'Command.CommandId' --output text).Trim()
 
             for ($attempt = 1; $attempt -le 24; $attempt++) {
