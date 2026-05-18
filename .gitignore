@@ -3,3 +3,6 @@
 *.tfstate.backup
 crash.log
 *.tfplan
+*.pem
+*.key
+ec2-*.pem

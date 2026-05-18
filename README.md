@@ -1,14 +1,12 @@
 # Jenkins + Terraform AWS Provisioning
 
-This repository contains a Jenkins pipeline and Terraform configuration that provisions a small AWS environment, including:
+This repository contains a Jenkins pipeline and Terraform configuration that provisions:
 
-- a VPC
-- a public subnet
-- an internet gateway and route table
-- a security group
-- one EC2 instance bootstrapped with Kubernetes tooling
-- SSM access for post-provision verification
-- SSH access with a Terraform-generated key pair
+- a security group (SSH access on port 22)
+- an SSH key pair (Terraform-generated)
+- one EC2 instance (Amazon Linux 2023) bootstrapped with Kubernetes tooling
+
+The instance is deployed to the default AWS VPC.
 
 ## Repository Layout
 
@@ -20,7 +18,7 @@ This repository contains a Jenkins pipeline and Terraform configuration that pro
 - Jenkins with the Terraform CLI available on the agent
 - Jenkins credential with ID `aws-credentials` using AWS access key and secret key
 - Terraform 1.5 or newer
-- AWS permissions to create VPC, subnet, route table, security group, and EC2 resources
+- AWS permissions to create security groups and EC2 instances
 
 ## Jenkins Pipeline
 
@@ -69,6 +67,7 @@ systemctl status containerd
 ## Notes
 
 - The EC2 bootstrap installs containerd, kubelet, kubeadm, and kubectl on Amazon Linux 2023.
-- The instance profile includes the `AmazonSSMManagedInstanceCore` policy so Jenkins can verify the host through SSM.
-- The Jenkins agent needs the AWS CLI available because the verification stage calls `aws ssm send-command`.
+- The instance runs in the default AWS VPC with a public IP automatically assigned.
+- SSH access requires the private key exported from Terraform (see SSH Access section).
+- For production use, consider restricting `allowed_ssh_cidr` to your public IP instead of `0.0.0.0/0`.
 - If you need remote state, add an S3 backend before using this in production.
